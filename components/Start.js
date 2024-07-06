@@ -1,9 +1,22 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Text, TextInput, ImageBackground, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Text, TextInput, ImageBackground, TouchableOpacity, Alert } from 'react-native';
+import { getAuth, signInAnonymously } from "firebase/auth";
 
-const Screen1 = ({ navigation }) => {
+const Welcome = ({ navigation }) => {
+  const auth = getAuth();
   const [name, setName] = useState('');
   const [background, setBackground] = useState('#FFFFFF'); // Add state for background color
+
+  const signInUser = () => {
+    signInAnonymously(auth)
+      .then(result => {
+        navigation.navigate("Chat", { userID: result.user.uid, name: name, background: background });
+        Alert.alert("Signed in Successfully!");
+      })
+      .catch(error => {
+        Alert.alert("Unable to sign in, try later again.");
+      });
+  };
 
   return (
     <ImageBackground
@@ -62,7 +75,7 @@ const Screen1 = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.startChattingButton}
-            onPress={() => navigation.navigate('Screen2', { name: name, background: background })}
+            onPress={signInUser}
           >
             <Text style={styles.startChattingButtonText}>Start Chatting</Text>
           </TouchableOpacity>
@@ -150,4 +163,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default Screen1;
+export default Welcome;

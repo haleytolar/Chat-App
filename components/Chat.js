@@ -1,26 +1,37 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, KeyboardAvoidingView, Platform, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Image } from 'react-native';
 import { Bubble, GiftedChat } from 'react-native-gifted-chat';
+import { collection, addDoc, onSnapshot, query, orderBy } from "firebase/firestore";
 
-const Screen2 = ({ route, navigation }) => {
-  const { name, background } = route.params;
+export const Chat = ({ route, navigation, db }) => {
+  const { name, background, userID } = route.params;
+  const [messages, setMessages] = useState([]);
 
   useEffect(() => {
     navigation.setOptions({ title: name });
-  }, [navigation, name]);
 
-  return (
-    <View style={[styles.container, { backgroundColor: background }]}>
-      <Chat />
-    </View>
-  );
-};
+    const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
 
-const Chat = () => {
-  const [messages, setMessages] = useState([]);
+    const unsubMessages = onSnapshot(q, (docs) => {
+      let newMessages = [];
+      docs.forEach(doc => {
+        newMessages.push({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: new Date(doc.data().createdAt.toMillis())
+        });
+      });
+      setMessages(newMessages);
+    });
+
+    return () => {
+      if (unsubMessages) unsubMessages();
+    };
+  }, []);
+
 
   const onSend = (newMessages) => {
-    setMessages(previousMessages => GiftedChat.append(previousMessages, newMessages));
+    addDoc(collection(db, "messages"), newMessages[0]);
   };
 
   const renderBubble = (props) => {
@@ -39,65 +50,62 @@ const Chat = () => {
     );
   };
 
-  useEffect(() => {
-    setMessages([
-      {
-        _id: 1,
-        text: 'Hello developer',
-        createdAt: new Date(),
-        user: {
-          _id: 2,
-          name: 'React Native',
-          avatar: 'https://placeimg.com/140/140/any',
-        },
-      },
-      {
-        _id: 2,
-        text: 'This is a system message',
-        createdAt: new Date(),
-        system: true,
-      },
-    ]);
-  }, []);
+  const renderMessage = (props) => {
+    return (
+      <View style={styles.messageContainer}>
+        <Image
+          source={{ uri: 'https://path-to-your-icon.png' }}
+          style={styles.icon}
+        />
+        <Bubble {...props} />
+      </View>
+    );
+  };
+
+  const renderAvatar = (props) => {
+    return (
+      <Image
+        source={{ uri: props.currentMessage.user.avatar }}
+        style={styles.avatar}
+      />
+    );
+  };
 
   return (
-    <View style={styles.chatContainer}>
+    <View style={[styles.chatContainer, { backgroundColor: background }]}>
       <GiftedChat
         messages={messages}
         renderBubble={renderBubble}
+        renderMessage={renderMessage}
+        renderAvatar={renderAvatar}
         onSend={messages => onSend(messages)}
         user={{
-          _id: 1,
+          _id: userID,
         }}
       />
-      {Platform.OS === 'android' ? <KeyboardAvoidingView behavior="height" /> : null}
-      <TouchableOpacity
-        accessible={true}
-        accessibilityLabel="More options"
-        accessibilityHint="Lets you choose to send an image or your geolocation."
-        accessibilityRole="button"
-        onPress={() => { /* handle press */ }}>
-        <View style={styles.button}>
-          {/* button content */}
-        </View>
-      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   chatContainer: {
     flex: 1,
     width: '100%',
   },
-  button: {
-    // define button styles here
+  messageContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  icon: {
+    width: 24,
+    height: 24,
+    marginRight: 8,
+  },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
   },
 });
 
-export default Screen2;
+export default Chat;
