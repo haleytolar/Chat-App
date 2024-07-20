@@ -1,73 +1,93 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Image } from 'react-native';
-import { Bubble, GiftedChat } from 'react-native-gifted-chat';
+import { StyleSheet, View, Text, Platform, KeyboardAvoidingView } from 'react-native';
+import { Bubble, GiftedChat, InputToolbar } from 'react-native-gifted-chat';
 import { collection, addDoc, onSnapshot, query, orderBy } from "firebase/firestore";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const Chat = ({ route, navigation, db }) => {
+export const Chat = ({ route, navigation, db, isConnected }) => {
   const { name, background, userID } = route.params;
   const [messages, setMessages] = useState([]);
+
+  const onSend = async (newMessages) => {
+    await addDoc(collection(db, "messages"), newMessages[0]);
+  };
+
+  const renderBubble = (props) => (
+    <Bubble
+      {...props}
+      wrapperStyle={{
+        right: {
+          backgroundColor: '#000',
+        },
+        left: {
+          backgroundColor: '#FFF',
+        },
+      }}
+    />
+  );
+
+  const renderInputToolbar = (props) => {
+    if (isConnected) return <InputToolbar {...props} />;
+    return null;
+  };
+
+  const loadCachedMessages = async () => {
+    try {
+      const cachedMessages = await AsyncStorage.getItem("messages");
+      if (cachedMessages) {
+        setMessages(JSON.parse(cachedMessages));
+      }
+    } catch (error) {
+      console.error("Failed to load messages from cache", error);
+    }
+  };
+
+  const cacheMessages = async (messagesToCache) => {
+    try {
+      await AsyncStorage.setItem("messages", JSON.stringify(messagesToCache));
+    } catch (error) {
+      console.error("Failed to cache messages", error);
+    }
+  };
 
   useEffect(() => {
     navigation.setOptions({ title: name });
 
-    const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
+    let unsubMessages;
 
-    const unsubMessages = onSnapshot(q, (docs) => {
-      let newMessages = [];
-      docs.forEach(doc => {
-        newMessages.push({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: new Date(doc.data().createdAt.toMillis())
+    const fetchMessages = async () => {
+      await loadCachedMessages();
+
+      if (isConnected) {
+        const q = query(collection(db, "messages"), orderBy("createdAt", "desc"));
+        unsubMessages = onSnapshot(q, (docs) => {
+          let newMessages = [];
+          docs.forEach(doc => {
+            newMessages.push({
+              _id: doc.id,
+              ...doc.data(),
+              createdAt: new Date(doc.data().createdAt.toMillis())
+            });
+          });
+          cacheMessages(newMessages);
+          setMessages(newMessages);
         });
-      });
-      setMessages(newMessages);
-    });
+      }
+    };
+
+    fetchMessages();
 
     return () => {
       if (unsubMessages) unsubMessages();
     };
-  }, []);
-
-
-  const onSend = (newMessages) => {
-    addDoc(collection(db, "messages"), newMessages[0]);
-  };
-
-  const renderBubble = (props) => {
-    return (
-      <Bubble
-        {...props}
-        wrapperStyle={{
-          right: {
-            backgroundColor: '#000',
-          },
-          left: {
-            backgroundColor: '#FFF',
-          },
-        }}
-      />
-    );
-  };
-
-  const renderMessage = (props) => {
-    return (
-      <View style={styles.messageContainer}>
-        <Image
-          source={{ uri: 'https://path-to-your-icon.png' }}
-          style={styles.icon}
-        />
-        <Bubble {...props} />
-      </View>
-    );
-  };
+  }, [isConnected]);
 
   const renderAvatar = (props) => {
+    const nameInitial = props.currentMessage.user.name.charAt(0).toUpperCase();
     return (
-      <Image
-        source={{ uri: props.currentMessage.user.avatar }}
-        style={styles.avatar}
-      />
+      <View style={[styles.avatar, { backgroundColor: '#D3D3D3' }]}>
+        <Text style={styles.avatarText}>{nameInitial}</Text>
+      </View>
     );
   };
 
@@ -76,13 +96,17 @@ export const Chat = ({ route, navigation, db }) => {
       <GiftedChat
         messages={messages}
         renderBubble={renderBubble}
-        renderMessage={renderMessage}
+        renderInputToolbar={renderInputToolbar}
         renderAvatar={renderAvatar}
         onSend={messages => onSend(messages)}
         user={{
           _id: userID,
+          name: name,
         }}
       />
+      {Platform.OS === 'android' || Platform.OS === 'ios' ? (
+        <KeyboardAvoidingView behavior="height" />
+      ) : null}
     </View>
   );
 };
@@ -92,20 +116,18 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
-  messageContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  icon: {
-    width: 24,
-    height: 24,
-    marginRight: 8,
-  },
   avatar: {
     width: 36,
     height: 36,
     borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    color: '#FFFFFF',
+    fontSize: 18,
   },
 });
 
 export default Chat;
+
