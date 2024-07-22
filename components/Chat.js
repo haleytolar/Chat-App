@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, View, Text, Platform, KeyboardAvoidingView } from 'react-native';
+import { StyleSheet, View, Text, Platform, KeyboardAvoidingView, Alert } from 'react-native';
 import { Bubble, GiftedChat, InputToolbar } from 'react-native-gifted-chat';
 import { collection, addDoc, onSnapshot, query, orderBy } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import CustomActions from './CustomActions';
+import MapView from 'react-native-maps';
 
-export const Chat = ({ route, navigation, db, isConnected }) => {
+const Chat = ({ route, navigation, db, isConnected, storage }) => {
   const { name, background, userID } = route.params;
   const [messages, setMessages] = useState([]);
 
@@ -28,6 +30,34 @@ export const Chat = ({ route, navigation, db, isConnected }) => {
 
   const renderInputToolbar = (props) => {
     if (isConnected) return <InputToolbar {...props} />;
+    return null;
+  };
+
+  const renderCustomActions = (props) => {
+    return <CustomActions userID={userID} storage={storage} {...props} />;
+  };
+
+
+  const renderCustomView = (props) => {
+    const { currentMessage } = props;
+    if (currentMessage.location) {
+      return (
+        <MapView
+          style={{
+            width: 150,
+            height: 100,
+            borderRadius: 13,
+            margin: 3
+          }}
+          region={{
+            latitude: currentMessage.location.latitude,
+            longitude: currentMessage.location.longitude,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          }}
+        />
+      );
+    }
     return null;
   };
 
@@ -99,6 +129,8 @@ export const Chat = ({ route, navigation, db, isConnected }) => {
         renderInputToolbar={renderInputToolbar}
         renderAvatar={renderAvatar}
         onSend={messages => onSend(messages)}
+        renderActions={renderCustomActions}
+        renderCustomView={renderCustomView}
         user={{
           _id: userID,
           name: name,
@@ -130,4 +162,3 @@ const styles = StyleSheet.create({
 });
 
 export default Chat;
-

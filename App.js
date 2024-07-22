@@ -8,6 +8,7 @@ import { getFirestore, disableNetwork, enableNetwork } from "firebase/firestore"
 import { LogBox, Alert } from 'react-native';
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useNetInfo } from "@react-native-community/netinfo";
+import { getStorage } from "firebase/storage";
 
 LogBox.ignoreLogs(["AsyncStorage has been extracted from"]);
 
@@ -30,6 +31,8 @@ const db = getFirestore(app);
 // Create the navigator
 const Stack = createNativeStackNavigator();
 
+const storage = getStorage(app);
+
 const App = () => {
   const connectionStatus = useNetInfo();
 
@@ -48,8 +51,14 @@ const App = () => {
         <Stack.Screen name="Welcome" component={Welcome} />
         <Stack.Screen
           name="Chat"
-          component={(props) => <Chat isConnected={connectionStatus.isConnected} db={db} {...props} />}
-        />
+        >
+          {props => <Chat
+            isConnected={connectionStatus.isConnected}
+            db={db}
+            storage={storage}
+            {...props}
+          />}
+        </Stack.Screen>
       </Stack.Navigator>
     </NavigationContainer>
   );
