@@ -1,12 +1,12 @@
 # 📱 Mobile Chat App
 
 ## Overview
-A mobile chat application built with React Native. The app provides users with a chat interface and options to share images and their location.
+A mobile chat application built using React Native. This user-friendly app provides a seamless chat interface and advanced features for effortlessly sharing images and location in real time.
 
 ## Key Features
-- **User Customization**: A page where users can enter their name and choose a background color for the chat screen before joining the chat.
-- **Chat Interface**: A page displaying the conversation, as well as an input field and submit button.
-- **Multimedia Support**: The chat provides users with two additional communication features: sending images and location data. Data gets stored online and offline.
+- **User Customization**: Users will be directed to a page where they can input their name and select a background color for the chat screen.
+- **Chat Interface**: The page will present the ongoing conversation and feature a text input field where you can type your message, along with a submit button to send it.
+- **Multimedia Support**: In the chat, users can share images and their location. The data is stored both online and offline for easy access.
 
 ## Dependencies
 - React Native
